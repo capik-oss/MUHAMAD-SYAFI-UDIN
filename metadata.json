@@ -1,0 +1,6 @@
+{
+  "name": "Sahabat Ansor Diwek",
+  "description": "Aplikasi Gerakan Pemuda Ansor Diwek Jombang - PD/PRT, Mars & Lagu Perjuangan, Lapak Kader, dan Asisten AI Gemini.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

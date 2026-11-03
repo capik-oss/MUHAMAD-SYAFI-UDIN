@@ -1,0 +1,235 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile for Ansor / Banser cadre and PAC administration",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Unique Google Auth UID of the user"
+        },
+        "name": {
+          "type": "string",
+          "description": "Full name of the cadre"
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the user"
+        },
+        "role": {
+          "type": "string",
+          "description": "Role within GP Ansor Diwek",
+          "enum": ["kader", "admin"]
+        },
+        "ktaNumber": {
+          "type": "string",
+          "description": "KTA or member identification number"
+        },
+        "village": {
+          "type": "string",
+          "description": "Ranting village in Kecamatan Diwek"
+        },
+        "unit": {
+          "type": "string",
+          "description": "Organization wing (GP Ansor, Banser, MDS Rijalul Ansor)"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Document creation timestamp (FieldValue.serverTimestamp())"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Document update timestamp (FieldValue.serverTimestamp())"
+        }
+      },
+      "required": ["userId", "name", "role", "createdAt"]
+    },
+    "CadreProductItem": {
+      "title": "CadreProductItem",
+      "description": "MSME business listing in Lapak Kader Ansor Diwek",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique product listing ID"
+        },
+        "userId": {
+          "type": "string",
+          "description": "UID of the cadre creating the listing"
+        },
+        "name": {
+          "type": "string",
+          "description": "Product or service name"
+        },
+        "businessName": {
+          "type": "string",
+          "description": "Brand or store name"
+        },
+        "category": {
+          "type": "string",
+          "description": "Business sector category"
+        },
+        "price": {
+          "type": "string",
+          "description": "Formatted price or price range"
+        },
+        "ownerName": {
+          "type": "string",
+          "description": "Business owner cadre name"
+        },
+        "village": {
+          "type": "string",
+          "description": "Location village in Diwek"
+        },
+        "phone": {
+          "type": "string",
+          "description": "WhatsApp contact number"
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of product or service"
+        },
+        "isVerifiedKader": {
+          "type": "boolean",
+          "description": "Verification status by PAC"
+        },
+        "status": {
+          "type": "string",
+          "description": "Moderation status",
+          "enum": ["approved", "pending", "rejected"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Update timestamp"
+        }
+      },
+      "required": ["id", "userId", "name", "businessName", "category", "price", "ownerName", "phone", "createdAt"]
+    },
+    "PACEvent": {
+      "title": "PACEvent",
+      "description": "Agenda and calendar event organized by PAC GP Ansor Diwek or Ranting",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Event unique identifier"
+        },
+        "title": {
+          "type": "string",
+          "description": "Event title"
+        },
+        "category": {
+          "type": "string",
+          "description": "Event category (Majlis, Rapat, Banser, Sosial)"
+        },
+        "dayOfMonth": {
+          "type": "integer",
+          "description": "Day of the month"
+        },
+        "monthNumber": {
+          "type": "integer",
+          "description": "Month number (1-12)"
+        },
+        "year": {
+          "type": "integer",
+          "description": "Year of event"
+        },
+        "dayName": {
+          "type": "string",
+          "description": "Display day name"
+        },
+        "timeDisplay": {
+          "type": "string",
+          "description": "Time range string"
+        },
+        "location": {
+          "type": "string",
+          "description": "Venue / location"
+        },
+        "organizer": {
+          "type": "string",
+          "description": "Organizing body"
+        },
+        "description": {
+          "type": "string",
+          "description": "Activity details"
+        },
+        "dressCode": {
+          "type": "string",
+          "description": "Dress code recommendation"
+        },
+        "isRantingEvent": {
+          "type": "boolean",
+          "description": "Whether organized by ranting or PAC"
+        },
+        "village": {
+          "type": "string",
+          "description": "Village location"
+        },
+        "creatorId": {
+          "type": "string",
+          "description": "UID of admin/cadre who created the event"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Update timestamp"
+        }
+      },
+      "required": ["id", "title", "category", "dayOfMonth", "monthNumber", "year", "location", "organizer", "creatorId", "createdAt"]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Authoritative list of PAC Diwek administrators",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "User UID who is a PAC administrator"
+        },
+        "role": {
+          "type": "string",
+          "description": "Admin designation"
+        },
+        "addedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Date added"
+        }
+      },
+      "required": ["userId", "role"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Stores individual member user profiles"
+    },
+    "/lapak_kader/{productId}": {
+      "schema": "CadreProductItem",
+      "description": "Stores MSME listings created by cadres and moderated by PAC"
+    },
+    "/ansor_events/{eventId}": {
+      "schema": "PACEvent",
+      "description": "Stores organization agenda and majlis events"
+    },
+    "/admins/{userId}": {
+      "schema": "AdminRecord",
+      "description": "Privileged admin directory for PAC Diwek"
+    }
+  }
+}

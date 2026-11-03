@@ -1,0 +1,156 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // Validation blueprints
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.name is string && data.name.size() >= 2 && data.name.size() <= 100 &&
+             data.role in ['kader', 'admin'] &&
+             (!('email' in data) || data.email == null || (data.email is string && data.email.size() <= 120)) &&
+             (!('ktaNumber' in data) || data.ktaNumber == null || (data.ktaNumber is string && data.ktaNumber.size() <= 50)) &&
+             (!('village' in data) || data.village == null || (data.village is string && data.village.size() <= 100)) &&
+             (!('unit' in data) || data.unit == null || (data.unit is string && data.unit.size() <= 100)) &&
+             (!('updatedAt' in data) || data.updatedAt == null || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    function isValidProduct(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.userId is string &&
+             data.name is string && data.name.size() >= 2 && data.name.size() <= 150 &&
+             data.businessName is string && data.businessName.size() >= 2 && data.businessName.size() <= 150 &&
+             data.category is string && data.category.size() <= 100 &&
+             data.price is string && data.price.size() <= 50 &&
+             data.ownerName is string && data.ownerName.size() >= 2 && data.ownerName.size() <= 100 &&
+             data.phone is string && data.phone.size() >= 8 && data.phone.size() <= 30 &&
+             (!('village' in data) || data.village == null || (data.village is string && data.village.size() <= 100)) &&
+             (!('description' in data) || data.description == null || (data.description is string && data.description.size() <= 1000)) &&
+             (!('isVerifiedKader' in data) || data.isVerifiedKader is bool) &&
+             (!('status' in data) || data.status in ['approved', 'pending', 'rejected']) &&
+             (!('updatedAt' in data) || data.updatedAt == null || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    function isValidEvent(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.title is string && data.title.size() >= 3 && data.title.size() <= 200 &&
+             data.category is string && data.category.size() <= 50 &&
+             data.dayOfMonth is int && data.dayOfMonth >= 1 && data.dayOfMonth <= 31 &&
+             data.monthNumber is int && data.monthNumber >= 1 && data.monthNumber <= 12 &&
+             data.year is int && data.year >= 2024 && data.year <= 2100 &&
+             data.location is string && data.location.size() >= 2 && data.location.size() <= 250 &&
+             data.organizer is string && data.organizer.size() >= 2 && data.organizer.size() <= 150 &&
+             data.creatorId is string &&
+             (!('dayName' in data) || data.dayName == null || (data.dayName is string && data.dayName.size() <= 50)) &&
+             (!('timeDisplay' in data) || data.timeDisplay == null || (data.timeDisplay is string && data.timeDisplay.size() <= 50)) &&
+             (!('description' in data) || data.description == null || (data.description is string && data.description.size() <= 1000)) &&
+             (!('dressCode' in data) || data.dressCode == null || (data.dressCode is string && data.dressCode.size() <= 100)) &&
+             (!('isRantingEvent' in data) || data.isRantingEvent is bool) &&
+             (!('village' in data) || data.village == null || (data.village is string && data.village.size() <= 100)) &&
+             (!('updatedAt' in data) || data.updatedAt == null || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    // User Profiles
+    match /users/{userId} {
+      allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() &&
+                       request.auth.uid == userId &&
+                       isValidId(userId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll(['userId', 'name', 'role', 'createdAt']) &&
+                       incoming().keys().hasOnly(['userId', 'name', 'email', 'role', 'ktaNumber', 'village', 'unit', 'createdAt', 'updatedAt']) &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time &&
+                       isValidUserProfile(incoming());
+      allow update: if isSignedIn() &&
+                       (request.auth.uid == userId || isAdmin()) &&
+                       isValidId(userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidUserProfile(incoming()) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['name', 'email', 'role', 'ktaNumber', 'village', 'unit', 'updatedAt']);
+      allow delete: if isSignedIn() && (request.auth.uid == userId || isAdmin()) && isValidId(userId);
+    }
+
+    // Lapak Kader (MSME Listings)
+    match /lapak_kader/{productId} {
+      allow get: if isSignedIn() && isValidId(productId) &&
+                    (resource.data.userId == request.auth.uid || resource.data.status == 'approved' || isAdmin());
+      allow list: if isSignedIn() &&
+                     (resource.data.userId == request.auth.uid || resource.data.status == 'approved' || isAdmin());
+      allow create: if isSignedIn() &&
+                       isValidId(productId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll(['id', 'userId', 'name', 'businessName', 'category', 'price', 'ownerName', 'phone', 'createdAt']) &&
+                       incoming().keys().hasOnly(['id', 'userId', 'name', 'businessName', 'category', 'price', 'ownerName', 'village', 'phone', 'description', 'isVerifiedKader', 'status', 'createdAt', 'updatedAt']) &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time &&
+                       isValidProduct(incoming());
+      allow update: if isSignedIn() &&
+                       isValidId(productId) &&
+                       (existing().userId == request.auth.uid || isAdmin()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidProduct(incoming()) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['name', 'businessName', 'category', 'price', 'ownerName', 'village', 'phone', 'description', 'isVerifiedKader', 'status', 'updatedAt']);
+      allow delete: if isSignedIn() && isValidId(productId) &&
+                       (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    // Ansor Events (Agenda & Majlis)
+    match /ansor_events/{eventId} {
+      allow get: if isSignedIn() && isValidId(eventId);
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() &&
+                       isValidId(eventId) &&
+                       incoming().creatorId == request.auth.uid &&
+                       incoming().keys().hasAll(['id', 'title', 'category', 'dayOfMonth', 'monthNumber', 'year', 'location', 'organizer', 'creatorId', 'createdAt']) &&
+                       incoming().keys().hasOnly(['id', 'title', 'category', 'dayOfMonth', 'monthNumber', 'year', 'dayName', 'timeDisplay', 'location', 'organizer', 'description', 'dressCode', 'isRantingEvent', 'village', 'creatorId', 'createdAt', 'updatedAt']) &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time &&
+                       isValidEvent(incoming());
+      allow update: if isSignedIn() &&
+                       isValidId(eventId) &&
+                       (existing().creatorId == request.auth.uid || isAdmin()) &&
+                       incoming().creatorId == existing().creatorId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidEvent(incoming()) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['title', 'category', 'dayOfMonth', 'monthNumber', 'year', 'dayName', 'timeDisplay', 'location', 'organizer', 'description', 'dressCode', 'isRantingEvent', 'village', 'updatedAt']);
+      allow delete: if isSignedIn() && isValidId(eventId) &&
+                       (existing().creatorId == request.auth.uid || isAdmin());
+    }
+
+    // Admins Collection (Authoritative PAC Administration directory)
+    match /admins/{userId} {
+      allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin();
+      allow write: if isAdmin();
+    }
+  }
+}
